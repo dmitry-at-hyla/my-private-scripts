@@ -1,0 +1,121 @@
+#!/bin/bash
+
+ENV=dev
+PROGRAM=hyla
+APP=cs
+SERVER_NO=1
+
+while (( "$#" ))
+do
+    ARG=$1
+    case ${ARG} in
+        bastion|\
+        cs|commonservices|common-services|\
+        csweb|cs-web|web|commonservicesweb|common-services-web|commonservices-web|\
+        ce|cew|ce-web|ceweb|cewweb|cew-web|\
+        batch|batch-server|batchserver|\
+        qd|quartzdesk|batch-console|batchconsole|\
+        sc|springcloud|spring-cloud|cloud|\
+        rmq|rabbitmq|\
+        sonar|sonarqube|\
+        mock|wiremock|wire-mock|mockserver|mock-server)
+            APP=${ARG}
+            ;;
+        dev|qa|uat|prod|tst|stg)
+            ENV=${ARG}
+            ;;
+        [1-9])
+            SERVER_NO=${ARG}
+            ;;
+        --)
+            shift
+            COMMAND=$*
+            shift $#
+            ;;
+        *)
+            PROGRAM=${ARG}
+            ;;
+    esac
+    shift
+done
+
+BASTION=$(bastions ${PROGRAM} ${ENV})
+
+# Special cases region
+
+if [[ "${PROGRAM}" == "old-google" ]]
+then
+    case ${APP} in
+    ce)
+        SERVER=gce-appserver
+        ;;
+    cew)
+        SERVER=gcew-appserver
+        ;;
+    ceweb|ce-web)
+        SERVER=gce-webserver
+        ;;
+    cewweb|cew-web)
+        SERVER=gcew-webserver
+        ;;
+    batch|batch-server|batchserver)
+        SERVER=batch-server
+        ;;
+    esac
+fi
+
+# End of special cases region
+
+if [[ "${SERVER}" == "" ]]
+then
+    case ${APP} in
+    cs|commonservices|common-services)
+        SERVER=${ENV}-appserver-${PROGRAM}-cs
+        ;;
+    ce)
+        SERVER=${ENV}-appserver-${PROGRAM}-ce
+        ;;
+    cew)
+        SERVER=${ENV}-appserver-${PROGRAM}-cew
+        ;;
+    csweb|cs-web|web|commonservicesweb|common-services-web|commonservices-web)
+        SERVER=${ENV}-webserver-${PROGRAM}-cs
+        ;;
+    ceweb|ce-web)
+        SERVER=${ENV}-webserver-${PROGRAM}-ce
+        ;;
+    cewweb|cew-web)
+        SERVER=${ENV}-webserver-${PROGRAM}-cew
+        ;;
+    batch|batch-server|batchserver)
+        SERVER=${ENV}-batchserver-${PROGRAM}
+        ;;
+    qd|quartzdesk|batch-console|batchconsole)
+        SERVER=${ENV}-batch-console
+        ;;
+    sc|springcloud|spring-cloud|cloud)
+        SERVER=${ENV}-springcloud-server
+        ;;
+    rmq|rabbitmq)
+        SERVER=${ENV}-rmq
+        ;;
+    sonar|sonarqube)
+        SERVER=${ENV}-${PROGRAM}-sonar
+        ;;
+    mock|wiremock|wire-mock|mockserver|mock-server)
+        SERVER=${ENV}-wire-mock
+        ;;
+    *)
+        SERVER=${ENV}-appserver-${PROGRAM}-cs
+        ;;
+    esac
+fi
+
+if [[ "$APP" == "bastion" ]]
+then
+    echo ssh -o "StrictHostKeyChecking=no" -t ${BASTION} ${COMMAND}
+    ssh -o "StrictHostKeyChecking=no" -t ${BASTION} ${COMMAND}
+else
+    echo ssh -o "StrictHostKeyChecking=no" -t ${BASTION} awsssh ${SERVER}-${SERVER_NO} ${COMMAND}
+    ssh -o "StrictHostKeyChecking=no" -t ${BASTION} awsssh ${SERVER}-${SERVER_NO} ${COMMAND}
+fi

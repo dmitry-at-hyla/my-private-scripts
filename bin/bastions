@@ -1,0 +1,60 @@
+#!/bin/bash
+
+if [[ $# -lt 2 ]]
+then
+    echo "Using: $0 <PROGRAM> <ENVIRONMENT>"
+    echo ""
+    echo "PROGRAM any program (vzw, att, msft, etc)"
+    echo "ENVIRONMENT dev,qa,uat,prod"
+    exit 1
+fi
+
+PROGRAM=$1
+ENVIRONMENT=$2
+
+BASTION=${ENVIRONMENT}-bastion.${PROGRAM}.hylatest.com
+
+# Special cases region
+
+if [[ "${ENVIRONMENT}" == "prod" ]]
+then
+    BASTION=bastion.${PROGRAM}.hylamobile.com
+
+    if [[ "${PROGRAM}" == "uscc" ]]
+    then
+        BASTION=bastion.uscellular.hylamobile.com
+    fi
+
+    if [[ "${PROGRAM}" == "msft" ]]
+    then
+        BASTION=bastion.microsoft.hylamobile.com
+    fi
+
+    if [[ "${PROGRAM}" == "vzw" ]]
+    then
+        BASTION="bastion.verizon.hyla-mobile.com"
+    fi
+
+    if [[ "${PROGRAM}" == "att" ]]
+    then
+        BASTION="bastion.att.hyla-mobile.com"
+    fi
+fi
+
+if [[ "${PROGRAM}" == "old-google" ]]
+then
+    case "${ENVIRONMENT}" in
+        dev) BASTION="bastion-host-1.dev.hylatest.com"
+            ;;
+        qa) BASTION="bastion-host-1.qa.hylatest.com"
+            ;;
+        uat) BASTION="bastion-host-2.uat.hylatest.com"
+            ;;
+        prod) BASTION="3.87.17.161"
+            ;;
+    esac
+fi
+
+# End of special cases region
+
+echo ${BASTION}

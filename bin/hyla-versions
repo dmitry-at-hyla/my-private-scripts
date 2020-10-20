@@ -1,0 +1,41 @@
+#!/usr/bin/python
+
+import requests
+import yaml
+import sys
+from os.path import expanduser
+
+def info(url, **kwargs):
+    branch = "Unknown"
+    commit = "Unknown"
+    author = "Unknown"
+    try:
+        req = requests.get(url, **kwargs)
+        git = req.json()["git"]
+        branch = git["branch"]
+        commit = git["commit"]["id"]["abbrev"]
+        author = git["build"]["user"]["name"]
+    except:
+        pass
+
+    return {
+        "branch": branch,
+        "commit": commit,
+        "author": author
+    }
+
+with open(expanduser('~') + '/.hyla-app-info', 'r') as f:
+    cfg = yaml.safe_load(f)
+
+env_name = len(sys.argv) > 1 and sys.argv[1] or 'dev'
+env = cfg[env_name]
+
+for account_name, account in env.items():
+    header = "Account: %s" % account_name.upper()
+    print(header)
+    print('-' * len(header))
+    for _, app in account.items():
+        app_info = info(app["endpoint"])
+        print("%-25s %-20s %-10s %-20s" % (
+            app["name"], app_info["branch"], app_info["commit"], app_info["author"]))
+    print("")

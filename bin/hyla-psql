@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -e
+
+if [[ $# < 1 ]]
+then
+    echo "Usage: $0 <DATABASE> [<ENVIRONMENT>] [<PROGRAM>]"
+    echo ""
+    echo "ENVIRONMENT dev,qa,uat,prod (default dev)"
+    echo "PROGRAM any program (default hyla)"
+    exit 1
+fi
+
+DATABASE=$1
+ENV=dev
+PROGRAM=hyla
+if [[ "$HYLA_PSQL_USER" == "" ]]
+then
+    HYLA_PSQL_USER=admin
+fi
+
+shift
+for ARG in "$@"
+do
+    case ${ARG} in
+    dev|qa|uat|tst|stg|prod)
+        ENV=${ARG}
+        ;;
+    *)
+        PROGRAM=${ARG}
+        ;;
+    esac
+done
+
+BASTION=$(bastions ${PROGRAM} ${ENV})
+SERVER=${ENV}-batchserver-${PROGRAM}
+RDS=rds.int
+
+# Special cases region
+
+if [[ "${PROGRAM}" == "old-google" ]]
+then
+    case "${ENV}" in
+        dev) SERVER="gce-appserver-1"
+             RDS="hyla-dev-db.ca6vkoiur41o.us-east-1.rds.amazonaws.com"
+             ;;
+        qa)  SERVER="batch-server"
+             RDS="hyla-qa-db.cbgf8qoiaxxt.us-east-1.rds.amazonaws.com"
+             ;;
+        uat) ERVER="gce-appserver-1"
+             RDS="hyla-uat-db.ceoa2zbhpwzr.us-east-1.rds.amazonaws.com"
+            ;;
+    esac
+fi
+
+ssh -t ${BASTION} \
+    awsssh -t -o LogLevel=ERROR $SERVER psql postgres://${HYLA_PSQL_USER}@${RDS}/${DATABASE}
