@@ -1,0 +1,123 @@
+#!/bin/bash
+
+REMOTE_USER=dantonyuk
+
+ENV=dev
+PROGRAM=hyla
+APP=cs
+SERVER_NO=1
+
+while (( "$#" ))
+do
+    ARG=$1
+    case ${ARG} in
+        bastion|\
+        cs|commonservices|common-services|\
+        csweb|cs-web|web|commonservicesweb|common-services-web|commonservices-web|\
+        ce|cew|ce-web|ceweb|cewweb|cew-web|\
+        batch|batch-server|batchserver|\
+        qd|quartzdesk|batch-console|batchconsole|\
+        sc|springcloud|spring-cloud|cloud|\
+        rmq|rabbitmq|\
+        sonar|sonarqube|\
+        mock|wiremock|wire-mock|mockserver|mock-server)
+            APP=${ARG}
+            ;;
+        dev|qa|uat|prod|tst|stg)
+            ENV=${ARG}
+            ;;
+        [1-9])
+            SERVER_NO=${ARG}
+            ;;
+        *)
+            if [[ $# -eq 1 ]]
+            then
+                FILE=${ARG}
+            else
+                PROGRAM=${ARG}
+            fi
+            ;;
+    esac
+    shift
+done
+
+BASTION=$(bastions ${PROGRAM} ${ENV})
+
+# Special cases region
+
+if [[ "${PROGRAM}" == "old-google" ]]
+then
+    case ${APP} in
+    ce)
+        SERVER=gce-appserver
+        ;;
+    cew)
+        SERVER=gcew-appserver
+        ;;
+    ceweb|ce-web)
+        SERVER=gce-webserver
+        ;;
+    cewweb|cew-web)
+        SERVER=gcew-webserver
+        ;;
+    batch|batch-server|batchserver)
+        SERVER=batch-server
+        ;;
+    esac
+fi
+
+# End of special cases region
+
+if [[ "${SERVER}" == "" ]]
+then
+    case ${APP} in
+    cs|commonservices|common-services)
+        SERVER=${ENV}-appserver-${PROGRAM}-cs
+        ;;
+    ce)
+        SERVER=${ENV}-appserver-${PROGRAM}-ce
+        ;;
+    cew)
+        SERVER=${ENV}-appserver-${PROGRAM}-cew
+        ;;
+    csweb|cs-web|web|commonservicesweb|common-services-web|commonservices-web)
+        SERVER=${ENV}-webserver-${PROGRAM}-cs
+        ;;
+    ceweb|ce-web)
+        SERVER=${ENV}-webserver-${PROGRAM}-ce
+        ;;
+    cewweb|cew-web)
+        SERVER=${ENV}-webserver-${PROGRAM}-cew
+        ;;
+    batch|batch-server|batchserver)
+        SERVER=${ENV}-batchserver-${PROGRAM}
+        ;;
+    qd|quartzdesk|batch-console|batchconsole)
+        SERVER=${ENV}-batch-console
+        ;;
+    sc|springcloud|spring-cloud|cloud)
+        SERVER=${ENV}-springcloud-server
+        ;;
+    rmq|rabbitmq)
+        SERVER=${ENV}-rmq
+        ;;
+    sonar|sonarqube)
+        SERVER=${ENV}-${PROGRAM}-sonar
+        ;;
+    mock|wiremock|wire-mock|mockserver|mock-server)
+        SERVER=${ENV}-wire-mock
+        ;;
+    *)
+        SERVER=${ENV}-appserver-${PROGRAM}-cs
+        ;;
+    esac
+fi
+
+set -e
+
+SERVER_IP=$(ssh -o "StrictHostKeyChecking=no" -t ${BASTION} \
+    /usr/bin/aws ec2 describe-instances --filters "Name=tag:Name,Values=${SERVER}" --region us-east-1 \
+    | jq -r '.Reservations[0].Instances['$((${SERVER_NO} - 1))'].NetworkInterfaces[0].PrivateIpAddresses[0].PrivateIpAddress')
+
+echo scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${FILE}" ${REMOTE_USER}@${SERVER_IP}:/tmp
+scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${FILE}" ${REMOTE_USER}@${SERVER_IP}:/tmp
