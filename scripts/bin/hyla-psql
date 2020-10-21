@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+#set -e
 
 if [[ $# < 1 ]]
 then
@@ -53,5 +53,7 @@ then
     esac
 fi
 
+echo ssh -t ${BASTION} \
+    awsssh -t -o LogLevel=ERROR $SERVER psql postgres://${HYLA_PSQL_USER}@${RDS}/${DATABASE}
 ssh -t ${BASTION} \
     awsssh -t -o LogLevel=ERROR $SERVER psql postgres://${HYLA_PSQL_USER}@${RDS}/${DATABASE}
