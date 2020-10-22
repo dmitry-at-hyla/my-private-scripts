@@ -1,77 +1,87 @@
 #!/bin/bash
 
+#
+# Using:
+#
+# scpaws [env] [program] <source> <destination>
+#
+# env or program could be in any order
+# source is a last but one parameter
+# destination is a last parameter
+# default env is dev
+# default program is hyla
+#
+# where source and destination are in form of [server:][number:][path]
+# default server is commonservices, default number is 1.
+# So following values are accepted:
+#
+# * ./file.txt (local file)
+# * :/tmp/file.txt (remote file on commonservices-1)
+# * ::/tmp/file.txt (remote file on commonservices-1)
+# * :2:/tmp/file.txt (remote file on commonservices-2)
+# * batch:/tmp/file.txt (remote file on batch-1)
+# * batch::/tmp/file.txt (remote file on batch-1)
+# * batch:2:/tmp/file.txt (remote file on batch-2)
+#
+# Examples:
+#
+# scpaws qa file.txt batch:/tmp
+# scpaws batch:/app/service/logs/output.log .
+#
+
+set -e
+
 REMOTE_USER=dantonyuk
 
 ENV=dev
 PROGRAM=hyla
-APP=cs
 SERVER_NO=1
+SRC_FILE=
+DST_FILE=
 
-while (( "$#" ))
-do
-    ARG=$1
-    case ${ARG} in
-        bastion|\
-        cs|commonservices|common-services|\
-        csweb|cs-web|web|commonservicesweb|common-services-web|commonservices-web|\
-        ce|cew|ce-web|ceweb|cewweb|cew-web|\
-        batch|batch-server|batchserver|\
-        qd|quartzdesk|batch-console|batchconsole|\
-        sc|springcloud|spring-cloud|cloud|\
-        rmq|rabbitmq|\
-        sonar|sonarqube|\
-        mock|wiremock|wire-mock|mockserver|mock-server)
-            APP=${ARG}
+get_resource() {
+    BASTION="$1"
+    RESOURCE="$2"
+
+    IFS=':' read -r -a SPLITTED <<< "${RESOURCE}"
+    case ${#SPLITTED[@]} in
+        1)
+            echo "${RESOURCE}"
             ;;
-        dev|qa|uat|prod|tst|stg)
-            ENV=${ARG}
+        2)
+            SERVER=$(get_server_name "${SPLITTED[0]}")
+            NUMBER=1
+            FILE=${SPLITTED[1]}
+            SERVER_IP=$(get_server_ip ${BASTION} ${SERVER} ${NUMBER})
+            echo ${REMOTE_USER}@${SERVER_IP}:${FILE}
             ;;
-        [1-9])
-            SERVER_NO=${ARG}
+        3)
+            SERVER=$(get_server_name "${SPLITTED[0]}")
+            NUMBER=${SPLITTED[1]:-1}
+            FILE=${SPLITTED[2]}
+            SERVER_IP=$(get_server_ip ${BASTION} ${SERVER} ${NUMBER})
+            echo ${REMOTE_USER}@${SERVER_IP}:${FILE}
             ;;
         *)
-            if [[ $# -eq 1 ]]
-            then
-                FILE=${ARG}
-            else
-                PROGRAM=${ARG}
-            fi
-            ;;
+            echo "Invalid file: ${RESOURCE}. File pattern is [server:][number:][path]" >&2
+            exit 1
     esac
-    shift
-done
+}
 
-BASTION=$(bastions ${PROGRAM} ${ENV})
+get_server_ip() {
+    BASTION=$1
+    SERVER=$2
+    NUMBER=$3
 
-# Special cases region
+    echo $(ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} \
+        /usr/bin/aws ec2 describe-instances --filters "Name=tag:Name,Values=${SERVER}" --region us-east-1 \
+        | jq -r '.Reservations[0].Instances['$((${NUMBER} - 1))'].NetworkInterfaces[0].PrivateIpAddresses[0].PrivateIpAddress')
+}
 
-if [[ "${PROGRAM}" == "old-google" ]]
-then
+get_server_name() {
+    APP=$1
     case ${APP} in
-    ce)
-        SERVER=gce-appserver
-        ;;
-    cew)
-        SERVER=gcew-appserver
-        ;;
-    ceweb|ce-web)
-        SERVER=gce-webserver
-        ;;
-    cewweb|cew-web)
-        SERVER=gcew-webserver
-        ;;
-    batch|batch-server|batchserver)
-        SERVER=batch-server
-        ;;
-    esac
-fi
-
-# End of special cases region
-
-if [[ "${SERVER}" == "" ]]
-then
-    case ${APP} in
-    cs|commonservices|common-services)
+    cs|commonservices|common-services|'')
         SERVER=${ENV}-appserver-${PROGRAM}-cs
         ;;
     ce)
@@ -108,16 +118,65 @@ then
         SERVER=${ENV}-wire-mock
         ;;
     *)
-        SERVER=${ENV}-appserver-${PROGRAM}-cs
+        echo "Unknown server: ${SERVER}"
+        exit 3
         ;;
     esac
-fi
 
-set -e
+    # Special cases region
 
-SERVER_IP=$(ssh -o "StrictHostKeyChecking=no" -t ${BASTION} \
-    /usr/bin/aws ec2 describe-instances --filters "Name=tag:Name,Values=${SERVER}" --region us-east-1 \
-    | jq -r '.Reservations[0].Instances['$((${SERVER_NO} - 1))'].NetworkInterfaces[0].PrivateIpAddresses[0].PrivateIpAddress')
+    if [[ "${PROGRAM}" == "old-google" ]]
+    then
+        case ${APP} in
+        ce)
+            SERVER=gce-appserver
+            ;;
+        cew)
+            SERVER=gcew-appserver
+            ;;
+        ceweb|ce-web)
+            SERVER=gce-webserver
+            ;;
+        cewweb|cew-web)
+            SERVER=gcew-webserver
+            ;;
+        batch|batch-server|batchserver)
+            SERVER=batch-server
+            ;;
+        esac
+    fi
 
-echo scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${FILE}" ${REMOTE_USER}@${SERVER_IP}:/tmp
-scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${FILE}" ${REMOTE_USER}@${SERVER_IP}:/tmp
+    # End of special cases region
+
+    echo ${SERVER}
+}
+
+for (( i=$#; i>0; i-- ))
+do
+    ARG="${!i}"
+    if [[ "${DST_RESOURCE}" == "" ]]
+    then
+        echo "DST: ${!i}"
+        DST_RESOURCE="${ARG}"
+    elif [[ "${SRC_RESOURCE}" == "" ]]
+    then
+        echo "SRC: ${!i}"
+        SRC_RESOURCE="${ARG}"
+    else
+        echo "ARG: ${!i}"
+        case ${ARG} in
+            dev|qa|uat|prod|tst|stg)
+                ENV="${ARG}"
+                ;;
+            *)
+                PROGRAM="${ARG}"
+        esac
+    fi
+done
+
+BASTION=$(bastions ${PROGRAM} ${ENV})
+SRC_FILE=$(get_resource ${BASTION} ${SRC_RESOURCE})
+DST_FILE=$(get_resource ${BASTION} ${DST_RESOURCE})
+
+echo scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${SRC_FILE}" "${DST_FILE}"
+scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${SRC_FILE}" "${DST_FILE}"
