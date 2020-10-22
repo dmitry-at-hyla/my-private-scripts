@@ -73,7 +73,7 @@ get_server_ip() {
     SERVER=$2
     NUMBER=$3
 
-    echo $(ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} \
+    echo $(ssh -q -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -t ${BASTION} \
         /usr/bin/aws ec2 describe-instances --filters "Name=tag:Name,Values=${SERVER}" --region us-east-1 \
         | jq -r '.Reservations[0].Instances['$((${NUMBER} - 1))'].NetworkInterfaces[0].PrivateIpAddresses[0].PrivateIpAddress')
 }
@@ -156,14 +156,11 @@ do
     ARG="${!i}"
     if [[ "${DST_RESOURCE}" == "" ]]
     then
-        echo "DST: ${!i}"
         DST_RESOURCE="${ARG}"
     elif [[ "${SRC_RESOURCE}" == "" ]]
     then
-        echo "SRC: ${!i}"
         SRC_RESOURCE="${ARG}"
     else
-        echo "ARG: ${!i}"
         case ${ARG} in
             dev|qa|uat|prod|tst|stg)
                 ENV="${ARG}"
