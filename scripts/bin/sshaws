@@ -113,9 +113,9 @@ fi
 
 if [[ "$APP" == "bastion" ]]
 then
-    echo ssh -o "StrictHostKeyChecking=no" -t ${BASTION} ${COMMAND}
-    ssh -o "StrictHostKeyChecking=no" -t ${BASTION} ${COMMAND}
+    echo ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} ${COMMAND} >&2
+    ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} ${COMMAND}
 else
-    echo ssh -o "StrictHostKeyChecking=no" -t ${BASTION} awsssh ${SERVER}-${SERVER_NO} ${COMMAND}
-    ssh -o "StrictHostKeyChecking=no" -t ${BASTION} awsssh ${SERVER}-${SERVER_NO} ${COMMAND}
+    echo ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} awsssh ${SERVER}-${SERVER_NO} ${COMMAND} >&2
+    ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} awsssh ${SERVER}-${SERVER_NO} ${COMMAND}
 fi

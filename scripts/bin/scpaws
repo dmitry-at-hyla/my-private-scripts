@@ -175,5 +175,5 @@ BASTION=$(bastions ${PROGRAM} ${ENV})
 SRC_FILE=$(get_resource ${BASTION} ${SRC_RESOURCE})
 DST_FILE=$(get_resource ${BASTION} ${DST_RESOURCE})
 
-echo scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${SRC_FILE}" "${DST_FILE}"
+echo scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${SRC_FILE}" "${DST_FILE}" >&2
 scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${SRC_FILE}" "${DST_FILE}"
