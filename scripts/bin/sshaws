@@ -18,6 +18,7 @@ do
         sc|springcloud|spring-cloud|cloud|\
         rmq|rabbitmq|\
         sonar|sonarqube|\
+        es|elastic|elastic-search|elastic-search|\
         mock|wiremock|wire-mock|mockserver|mock-server)
             APP=${ARG}
             ;;
@@ -101,6 +102,9 @@ then
         ;;
     sonar|sonarqube)
         SERVER=${ENV}-${PROGRAM}-sonar
+        ;;
+    es|elastic|elastic-search|elastic-search)
+        SERVER=${ENV}-elastic-search7
         ;;
     mock|wiremock|wire-mock|mockserver|mock-server)
         SERVER=${ENV}-wire-mock
