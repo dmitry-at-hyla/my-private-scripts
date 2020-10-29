@@ -115,11 +115,10 @@ then
     esac
 fi
 
-if [[ "$APP" == "bastion" ]]
+if [[ "${APP}" != "bastion" ]]
 then
-    echo ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} ${COMMAND} >&2
-    ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} ${COMMAND}
-else
-    echo ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} awsssh ${SERVER}-${SERVER_NO} ${COMMAND} >&2
-    ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} awsssh ${SERVER}-${SERVER_NO} ${COMMAND}
+    SERVER_COMMAND="awsssh ${SERVER}-${SERVER_NO}"
 fi
+
+echo ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} ${SERVER_COMMAND} ${COMMAND} >&2
+ssh -q -o "StrictHostKeyChecking=no" -t ${BASTION} ${SERVER_COMMAND} ${COMMAND}
