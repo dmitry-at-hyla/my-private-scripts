@@ -55,5 +55,10 @@ fi
 
 echo ssh -t ${BASTION} \
     awsssh -t -o LogLevel=ERROR $SERVER psql postgres://${HYLA_PSQL_USER}@${RDS}/${DATABASE}
-ssh -t ${BASTION} \
+expect -c "
+spawn -noecho ssh -t ${BASTION} \
     awsssh -t -o LogLevel=ERROR $SERVER psql postgres://${HYLA_PSQL_USER}@${RDS}/${DATABASE}
+expect "'"'"Verification code:"'"'"
+send 11111111\r
+interact
+"
