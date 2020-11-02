@@ -40,6 +40,8 @@ SRC_FILE=
 DST_FILE=
 
 get_resource() {
+    set -e
+
     BASTION="$1"
     RESOURCE="$2"
 
@@ -69,13 +71,19 @@ get_resource() {
 }
 
 get_server_ip() {
+    set -e
+
     BASTION=$1
     SERVER=$2
     NUMBER=$3
 
-    echo $(ssh -q -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -t ${BASTION} \
-        /usr/bin/aws ec2 describe-instances --filters "Name=tag:Name,Values=${SERVER}" --region us-east-1 \
-        | jq -r '.Reservations[0].Instances['$((${NUMBER} - 1))'].NetworkInterfaces[0].PrivateIpAddresses[0].PrivateIpAddress')
+    expect -c "
+        spawn -noecho ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t ${BASTION} \
+                /usr/bin/aws ec2 describe-instances --filters Name=tag:Name,Values=${SERVER} --region us-east-1
+        expect "'"'"Verification code:"'"'"
+        send 11111111\r
+        interact
+    " | grep -v 'Verification code' | jq -r '.Reservations[0].Instances['$((${NUMBER} - 1))'].NetworkInterfaces[0].PrivateIpAddresses[0].PrivateIpAddress'
 }
 
 get_server_name() {
@@ -175,5 +183,14 @@ BASTION=$(bastions ${PROGRAM} ${ENV})
 SRC_FILE=$(get_resource ${BASTION} ${SRC_RESOURCE})
 DST_FILE=$(get_resource ${BASTION} ${DST_RESOURCE})
 
-echo scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${SRC_FILE}" "${DST_FILE}" >&2
-scp -o 'ProxyCommand ssh '${BASTION}' -W %h:%p' "${SRC_FILE}" "${DST_FILE}"
+SSH_OPTIONS="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+
+echo scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
+    -o 'ProxyCommand ssh ${BASTION} -W %h:%p' "${SRC_FILE}" "${DST_FILE}"
+expect -c "
+spawn -noecho scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
+    -o { ProxyCommand ssh ${BASTION} -W %h:%p } "'"'"${SRC_FILE}"'"'" "'"'"${DST_FILE}"'"'"
+expect "'"'"Verification code:"'"'"
+send 11111111\r
+interact
+"
