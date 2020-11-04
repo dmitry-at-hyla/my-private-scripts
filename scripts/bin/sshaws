@@ -1,5 +1,6 @@
 #!/bin/bash
 
+DEBUG=${DEBUG:-0}
 ENV=dev
 PROGRAM=hyla
 APP=cs
@@ -125,9 +126,15 @@ then
     COMMAND='/bin/bash'
 fi
 
-echo ssh -q -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} "${COMMAND}" >&2
+EXPECT_LOG=0
+if [[ "${DEBUG}" == "1" ]]
+then
+    echo ssh -q -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} "${COMMAND}" >&2
+    EXPECT_LOG=1
+fi
+
 expect -c "
-log_user 0
+log_user ${EXPECT_LOG}
 spawn -noecho ssh -q -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} { ${COMMAND} }
 expect "'"'"Verification code:"'"'"
 send 11111111\r
