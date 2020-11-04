@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+if [[ "$#" -ne 2 ]]
+then
+    echo "Usage: $0 <ENVIRONMENT> <PROGRAM>"
+    echo "Example: $0 dev att"
+    exit 1
+fi
+
+$(dirname $0)/sshaws bastion "$1" "$2" -- \
+    'chmod u+w ~/.google_authenticator; echo 11111111 >> ~/.google_authenticator'
