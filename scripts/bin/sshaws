@@ -127,7 +127,8 @@ fi
 
 echo ssh -q -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} "${COMMAND}" >&2
 expect -c "
-spawn ssh -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} { ${COMMAND} }
+log_user 0
+spawn -noecho ssh -q -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} { ${COMMAND} }
 expect "'"'"Verification code:"'"'"
 send 11111111\r
 interact
