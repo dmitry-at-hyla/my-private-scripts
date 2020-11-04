@@ -120,9 +120,14 @@ then
     SERVER_COMMAND="awsssh ${SERVER}-${SERVER_NO}"
 fi
 
+if [[ "${COMMAND}" == "" ]]
+then
+    COMMAND='/bin/bash'
+fi
+
 echo ssh -q -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} "${COMMAND}" >&2
 expect -c "
-spawn ssh -q -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} { ${COMMAND} }
+spawn ssh -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} { ${COMMAND} }
 expect "'"'"Verification code:"'"'"
 send 11111111\r
 interact
