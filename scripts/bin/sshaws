@@ -116,21 +116,22 @@ then
     esac
 fi
 
-if [[ "${APP}" != "bastion" ]]
-then
-    SERVER_COMMAND="awsssh ${SERVER}-${SERVER_NO}"
-fi
-
-if [[ "${COMMAND}" == "" ]]
-then
-    COMMAND='/bin/bash'
-fi
-
 EXPECT_LOG=0
+QUIET_FLAG="-q"
 if [[ "${DEBUG}" == "1" ]]
 then
-    echo ssh -q -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} "${COMMAND}" >&2
     EXPECT_LOG=1
+    QUIET_FLAG=""
+fi
+
+if [[ "${APP}" != "bastion" ]]
+then
+    SERVER_COMMAND="awsssh ${QUIET_FLAG} ${SERVER}-${SERVER_NO}"
+fi
+
+if [[ "${DEBUG}" == "1" ]]
+then
+    echo ssh -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} "${COMMAND}" >&2
 fi
 
 expect -c "
