@@ -129,15 +129,5 @@ then
     SERVER_COMMAND="awsssh ${QUIET_FLAG} ${SERVER}-${SERVER_NO}"
 fi
 
-if [[ "${DEBUG}" == "1" ]]
-then
-    echo ssh -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} "${COMMAND}" >&2
-fi
-
-expect -c "
-log_user ${EXPECT_LOG}
-spawn -noecho ssh -q -t -o StrictHostKeyChecking=no ${BASTION} ${SERVER_COMMAND} { ${COMMAND} }
-expect "'"'"Verification code:"'"'"
-send 11111111\r
-interact
-"
+export EXPECT_LOG QUIET_FLAG BASTION SERVER_COMMAND COMMAND
+expect -f $(dirname $0)/ssh-verification.expect

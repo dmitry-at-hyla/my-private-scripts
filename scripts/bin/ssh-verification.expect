@@ -1,0 +1,23 @@
+#!/usr/bin/expect -f
+
+# Do not run it on your own. It's used by sshaws script.
+
+log_user $env(EXPECT_LOG)
+
+set ECHO_FLAG [if {$env(EXPECT_LOG) eq 1} {list -noecho}]
+set VVV_FLAG [if {$env(EXPECT_LOG) eq 1} {list -vvv}]
+set SERVER_COMMAND [if { [info exists env(SERVER_COMMAND) ] } {list $env(SERVER_COMMAND)}]
+set SPAWN_COMMAND "spawn $ECHO_FLAG ssh $VVV_FLAG $env(QUIET_FLAG) -t -o StrictHostKeyChecking=no $env(BASTION) $SERVER_COMMAND"
+
+if [ info exists env(COMMAND) ] {
+    puts $SPAWN_COMMAND
+    eval $SPAWN_COMMAND { $env(COMMAND) }
+} else {
+    puts $SPAWN_COMMAND
+    eval $SPAWN_COMMAND
+}
+
+expect "Verification code:"
+send 11111111\r
+
+interact
