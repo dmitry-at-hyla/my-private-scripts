@@ -1,0 +1,22 @@
+#!/bin/bash
+
+ENV=dev
+PROGRAM=hyla
+
+while (( "$#" ))
+do
+    ARG=$1
+    case ${ARG} in
+        dev|qa|uat|prod|tst|stg)
+            ENV=${ARG}
+            ;;
+        *)
+            PROGRAM=${ARG}
+            ;;
+    esac
+    shift
+done
+
+BASTION=$(bastions ${PROGRAM} ${ENV})
+
+ssh-keygen -f "~/.ssh/known_hosts" -R "${BASTION}"
